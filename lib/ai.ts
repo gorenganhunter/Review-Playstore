@@ -1,33 +1,29 @@
-export async function chatCompletionsLlamaKolosal(msg: string, system: string = "") {
+export async function chatCompletionsLlamaKolosal(
+  msg: string,
+  system: string = ""
+) {
   const response = await fetch("https://api.kolosal.ai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.KOLOSAL_AI_TOKEN}`
+      "Authorization": `Bearer ${process.env.KOLOSAL_AI_TOKEN!}`
     },
     body: JSON.stringify({
       model: "Llama 4 Maverick",
       messages: [
-        {
-          role: "system",
-          content: system
-        },
-        {
-          role: "user",
-          content: msg
-        }
+        { role: "system", content: system },
+        { role: "user", content: msg }
       ]
     })
-  })
+  });
 
-  const data = await response.json()
-
-  return data.choices[0].message.content
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content;
 }
 
 export async function mecutAISuruhAnalisisReview(reviews: string[]) {
   const msg = `
-    Analisis kumpulan review aplikasi berikut. Review dapat berasal dari berbagai rating (1–5), berbagai versi aplikasi, dan berbagai bahasa.
+Analisis kumpulan review aplikasi berikut. Review dapat berasal dari berbagai rating (1–5), berbagai versi aplikasi, dan berbagai bahasa.
 
     Tugasmu:
 
@@ -77,9 +73,10 @@ export async function mecutAISuruhAnalisisReview(reviews: string[]) {
 
     Berikut datanya:
     ${JSON.stringify(reviews)}
-`
+`;
+
   const system = `
-    Kamu adalah analis produk dan UX expert.
+Kamu adalah analis produk dan UX expert.
     Tugasmu adalah menganalisis kumpulan review aplikasi yang sangat banyak dan beragam.
     Fokus pada akurasi, identifikasi pola, dan memberi rekomendasi yang actionable.
 
@@ -94,14 +91,15 @@ export async function mecutAISuruhAnalisisReview(reviews: string[]) {
     - aturan tanda kutip benar
     - tidak ada field yang tidak diizinkan
 
-    Jika semua sudah valid, keluarkan HANYA JSON final tersebut.`
+    Jika semua sudah valid, keluarkan HANYA JSON final tersebut.
+`;
 
-  const summary = await chatCompletionsLlamaKolosal(msg, system)
+  const summary = await chatCompletionsLlamaKolosal(msg, system);
 
   const cleaned = summary
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
-    .replace(/```$/i, "")
+    .replace(/```$/i, "");
 
-  return JSON.parse(cleaned)
+  return JSON.parse(cleaned);
 }
