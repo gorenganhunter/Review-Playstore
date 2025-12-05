@@ -1,28 +1,29 @@
-import { getReviews } from "@/lib/reviews"
+import { getReviews } from "@/lib/reviews";
 
 export async function chatCompletionsLlamaKolosal(
   msg: string,
   system: string = "",
-  response_format: any = undefined
+  response_format: any = undefined,
 ) {
-  if (!process.env.KOLOSAL_AI_TOKEN) throw new Error("Missing KOLOSAL_API_TOKEN in .env")
+  if (!process.env.KOLOSAL_AI_TOKEN)
+    throw new Error("Missing KOLOSAL_API_TOKEN in .env");
 
   const body = {
     model: "Llama 4 Maverick",
     messages: [
       { role: "system", content: system },
-      { role: "user", content: msg }
+      { role: "user", content: msg },
     ],
-    response_format
-  }
+    response_format,
+  };
 
   const response = await fetch("https://api.kolosal.ai/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${process.env.KOLOSAL_AI_TOKEN}`
+      Authorization: `Bearer ${process.env.KOLOSAL_AI_TOKEN}`,
     },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
 
   const data = await response.json();
@@ -45,7 +46,7 @@ Analisis kumpulan review aplikasi berikut. Review dapat berasal dari berbagai ra
     - ada penjelasan singkat kenapa penting
 
     Format output (Wajib JSON valid):
-    
+
     {
       "overall_sentiment": "positive|negative|mixed|neutral",
       "summary_overall": "...",
@@ -98,22 +99,22 @@ Kamu adalah analis produk dan UX expert.
         properties: {
           overall_sentiment: {
             type: "string",
-            enum: ["positive", "negative", "mixed", "neutral"]
+            enum: ["positive", "negative", "mixed", "neutral"],
           },
           summary_overall: {
-            type: "string"
+            type: "string",
           },
           positive_points: {
             type: "array",
             items: {
-              type: "string"
-            }
+              type: "string",
+            },
           },
           negative_points: {
             type: "array",
             items: {
-              type: "string"
-            }
+              type: "string",
+            },
           },
           action_items_for_developer: {
             type: "array",
@@ -122,42 +123,63 @@ Kamu adalah analis produk dan UX expert.
               properties: {
                 priority: {
                   type: "string",
-                  enum: ["high", "medium", "low"]
+                  enum: ["high", "medium", "low"],
                 },
                 area: {
                   type: "string",
-                  enum: ["stability", "performance", "usability", "feature", "other"]
+                  enum: [
+                    "stability",
+                    "performance",
+                    "usability",
+                    "feature",
+                    "other",
+                  ],
                 },
                 description: {
-                  type: "string"
+                  type: "string",
                 },
                 reason: {
-                  type: "string"
-                }
+                  type: "string",
+                },
               },
               required: ["priority", "area", "description", "reason"],
-              additionalProperties: false
-            }
-          }
+              additionalProperties: false,
+            },
+          },
         },
-        required: ["overall_sentiment", "summary_overall", "positive_points", "negative_points", "action_items_for_developer"],
-        additionalProperties: false
-      }
-    }
-  }
+        required: [
+          "overall_sentiment",
+          "summary_overall",
+          "positive_points",
+          "negative_points",
+          "action_items_for_developer",
+        ],
+        additionalProperties: false,
+      },
+    },
+  };
 
   const summary = await chatCompletionsLlamaKolosal(msg, system, format);
 
   return JSON.parse(summary);
 }
 
-export async function fetchReviewsAndAnalyze(appId: string, reviewCount: number = 100) {
+export async function fetchReviewsAndAnalyze(
+  appId: string,
+  reviewCount: number = 100,
+) {
   try {
-    const reviews = await getReviews(appId, reviewCount)
+    const app = await getReviews(appId, reviewCount);
 
-    return await analyzeReviews(reviews)
+    const analysis = await analyzeReviews(app.reviews);
+
+    return {
+      ...analysis,
+      appName: app.appName,
+      icon: app.icon,
+    };
   } catch (e) {
-    console.error(e)
-    throw e
+    console.error(e);
+    throw e;
   }
 }

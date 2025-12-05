@@ -1,17 +1,43 @@
 "use client";
+import { useState, useRef } from "react";
 import Draggable from "react-draggable";
-import { useRef } from "react";
-import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const [url, setUrl] = useState("");
+
+  const handleEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && url.trim() !== "") {
+      const match = url.match(/id=([a-zA-Z0-9._-]+)/);
+      const appId = match ? match[1] : null;
+
+      if (appId) {
+        window.location.href = `/result?appId=${appId}`;
+      } else {
+        alert("URL tidak valid!");
+      }
+    }
+  };
+
+  const handleButtonClick = () => {
+    if (url.trim() === "") return;
+
+    const match = url.match(/id=([a-zA-Z0-9._-]+)/);
+    const appId = match ? match[1] : null;
+
+    if (appId) {
+      window.location.href = `/result?appId=${appId}`;
+    } else {
+      alert("URL tidak valid!");
+    }
+  };
+
   const nodeRef = useRef(null);
-  const router = useRouter();
 
   return (
     <>
       <div className="flex justify-center px-5 items-center min-h-screen text-center flex-col gap-6">
         <h1 className="text-4xl lg:text-5xl font-bold text-shadow-sm/30">
-          TITLE HERE
+          PLAYREVIEW
         </h1>
         <p className="max-w-xl text-lg opacity-70 -mt-2">
           Analisis otomatis kualitas aplikasi berdasarkan ribuan review
@@ -20,16 +46,16 @@ export default function Home() {
 
         <input
           id="url-input"
-          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === "Enter") router.push("/result");
-          }}
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={handleEnter}
           placeholder="https://play.google.com/store/apps/details?id="
           className="bg-white rounded-full px-6 py-4 text-xl w-full max-w-5xl shadow-sm/20"
         />
 
         <div className="flex justify-center w-full px-5 flex-col md:flex-row gap-4 mt-2">
           <button
-            onClick={() => router.push("/result")}
+            onClick={handleButtonClick}
             className="w-full md:w-fit bg-[#F3DBC4] hover:bg-[#F3DBC4]/60 cursor-pointer rounded-md text-lg px-4 py-2"
           >
             Cari Tahu Review

@@ -1,111 +1,174 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Pie } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+
+interface ReviewItem {
+  priority: string;
+  area: string;
+  description: string;
+  reason: string;
+}
+
+ChartJS.register(ArcElement, Tooltip, Legend);
+
 export default function ReviewLayout() {
-  const dummyReviews = [
-    {
-      user: "Rizky A.",
-      rating: 5,
-      comment:
-        "Aplikasinya mantap! UI clean, fitur lengkap. Udah kayak aplikasi 1 juta download 😆🔥",
-    },
-    {
-      user: "Sarah N.",
-      rating: 4,
-      comment:
-        "Bagus banget, tapi kadang loading agak lama kalau sinyal sekarat. Overall recommended!",
-    },
-    {
-      user: "Fadil R.",
-      rating: 3,
-      comment:
-        "Lumayan, cuma butuh perbaikan di notifikasi karena suka telat masuk.",
-    },
-    {
-      user: "Nadya K.",
-      rating: 2,
-      comment:
-        "Ide aplikasinya keren, tapi sering crash di Android 12 😭 tolong diperbaiki dev!",
-    },
-    {
-      user: "Anon",
-      rating: 1,
-      comment:
-        "Aplikasi auto force close pas buka. Aku uninstall, tapi iconnya masih ada 😨 help.",
-    },
-  ];
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const appId =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("appId")
+      : null;
+
+  useEffect(() => {
+    if (!appId) {
+      setError("Missing appId in URL");
+      setLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/analyze?appId=${appId}`);
+        const json = await res.json();
+
+        if (!res.ok) throw new Error(json.error || "Failed to fetch");
+
+        const raw = json.result;
+
+        setData({
+          summary: raw.summary_overall,
+          positiveArr: raw.positive_points,
+          criticArr: raw.negative_points,
+          positive: raw.positive_points?.join("\n• "),
+          critic: raw.negative_points?.join("\n• "),
+          sentiment: raw.overall_sentiment,
+          reviews: raw.action_items_for_developer || [],
+          appName: raw.appName,
+          icon: raw.icon,
+        });
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError(String(err));
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [appId]);
+
+  if (loading)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-xl text-[#4B3A28]">
+        Loading analysis...
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-500 text-xl">
+        {error}
+      </div>
+    );
+
+  const {
+    appName,
+    summary,
+    positive,
+    critic,
+    reviews,
+    positiveArr,
+    criticArr,
+    icon,
+  } = data;
+
+  const sentimentPieData = {
+    labels: ["Positive", "Negative", "Mixed"],
+    datasets: [
+      {
+        data: [positiveArr.length, criticArr.length, 3],
+        backgroundColor: ["#A1BC98", "#F08787", "#E8D3C2"],
+        borderWidth: 2,
+        borderColor: "#FFF8F0",
+      },
+    ],
+  };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center px-6 py-10 text-center gap-8">
-      <a href="/">
-        <h1 className="text-4xl font-bold text-shadow-sm/30">TITLE HERE</h1>
-      </a>
+    <div className="min-h-screen w-full flex flex-col items-center px-6 py-10 gap-5 text-[#4B3A28]">
+      <nav className="w-full max-w-7xl flex justify-center">
+        <Link
+          href="/"
+          className="text-[#4B3A28] font-extrabold text-3xl py-2 px-4 rounded-lg transition"
+        >
+          PLAYREVIEW
+        </Link>
+      </nav>
 
-      {/* Top section */}
-      <div className="w-full max-w-5xl flex flex-col md:flex-row items-center justify-between gap-6">
-        {/* Main review box */}
-        <article className="w-full">
-          <h2 className="hidden md:block text-2xl text-left mb-3 font-bold text-shadow-sm/30">
-            [App]{"'s"} Review{" "}
-          </h2>
-          <a href="https://play.google.com/store/apps/details?id=com.digidust.elokence.akinator.freemium&hl=id">
-            <div className=" flex items-center md:items-start flex-col-reverse md:flex-row gap-5">
-              <div className="w-full bg-white h-50 rounded-2xl shadow-sm flex items-center justify-center">
-                <p className="opacity-70">[App] Review Content Here</p>
-              </div>
-              <h2 className="md:hidden text-2xl text-left w-full font-bold text-shadow-sm/30">
-                [App]{"'s"} Review{" "}
-              </h2>
-              {/* Image */}
-              <img
-                src="https://i.pinimg.com/736x/69/1a/33/691a339ee61e786ca486ed6cd3e5b7e8.jpg"
-                alt="app"
-                className="w-50 h-50 rounded-full shadow-md object-cover object-center"
-              />
-            </div>
-          </a>
-        </article>
+      <div className="flex flex-col items-center gap-4 w-full max-w-7xl">
+        <img
+          src={`https://images.weserv.nl/?url=${encodeURIComponent(icon)}`}
+          alt={appName}
+          className="rounded-2xl mb-2 border border-[#E8D3C2] w-32 h-32 object-contain"
+        />
+        <h1 className="text-3xl font-bold text-center">{appName}</h1>
+        <div className="w-24 h-1 mb-4 rounded-full bg-[#C7A17A]"></div>
       </div>
 
-      {/* Positive / Critic section */}
-      <div className="w-full max-w-5xl flex flex-col md:flex-row gap-6">
-        <article className="w-full">
-          <h2 className="text-xl text-left mb-1 font-bold text-shadow-sm/30">
-            Positive
-          </h2>
-          <div className="w-full bg-white h-40 rounded-2xl shadow-sm flex items-center justify-center">
-            <p className="opacity-70">Positive Review</p>
-          </div>
-        </article>
-        <article className="w-full">
-          <h2 className="text-xl text-left mb-1 font-bold text-shadow-sm/30">
-            Critic
-          </h2>
-          <div className="w-full bg-white h-40 rounded-2xl shadow-sm flex items-center justify-center">
-            <p className="opacity-70">Critic Review</p>
-          </div>
-        </article>
+      <div className="w-full max-w-7xl flex flex-col md:flex-row items-start gap-5">
+        <div className="w-full rounded-3xl shadow-sm p-8 bg-[#FFF8F0] border border-[#E8D3C2]">
+          <p className="text-lg md:text-xl leading-relaxed opacity-90">
+            {summary}
+          </p>
+        </div>
       </div>
 
-      {/* Hall of Review */}
-      <div className="flex flex-col items-center gap-5 w-full">
-        <h2 className="text-2xl font-bold text-shadow-sm/30">Hall of Review</h2>
-
-        {/* Scroll Container */}
-        <div className="w-full max-w-5xl overflow-x-auto pr-2 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-transparent">
-          <div className="flex flex-row gap-4 py-2">
-            {dummyReviews.map((review, index) => (
-              <div
-                key={index}
-                className="rounded-xl min-w-[350px] bg-white shadow-sm p-3 flex flex-col gap-3"
-              >
-                <p className="text-md text-left font-bold">
-                  ⭐ {review.rating}
-                </p>
-                <p className="text-md text-left w-full opacity-70">
-                  {review.comment}
-                </p>
-              </div>
-            ))}
+      <div className="w-full max-w-7xl flex flex-col md:flex-row-reverse gap-6 mb-5">
+        <div className="max-w-7xl rounded-3xl shadow-sm p-8 bg-[#FFF8F0] border border-[#E8D3C2]">
+          <h2 className="text-2xl font-bold mb-4">Sentiment Distribution</h2>
+          <div className="max-w-sm mx-auto p-4 bg-[#FFF8F0] rounded-xl">
+            <Pie data={sentimentPieData} />
           </div>
         </div>
+        <div className="min-h-full w-full gap-6 flex flex-col">
+          <div className="border-l-4 border-[#A1BC98] p-6 rounded-xl h-full shadow-sm bg-[#FFF8F0] hover:shadow-lg transition">
+            <h2 className="text-xl font-bold mb-2">Positive</h2>
+            <p className="whitespace-pre-line opacity-90 leading-relaxed">
+              • {positive}
+            </p>
+          </div>
+          <div className="border-l-4 border-[#F08787] p-6 rounded-xl h-full shadow-md bg-[#FFF8F0] hover:shadow-lg transition">
+            <h2 className="text-xl font-bold mb-2">Critic</h2>
+            <p className="whitespace-pre-line opacity-90 leading-relaxed">
+              • {critic}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full max-w-7xl flex flex-col gap-3">
+        <h2 className="text-3xl font-bold">Action Items for Developer</h2>
+        <div className="w-24 h-1 mb-4 rounded-full bg-[#C7A17A]"></div>
+        {reviews?.map((item: ReviewItem, idx: number) => (
+          <div
+            key={idx}
+            className="p-6 bg-[#FFF8F0] border border-[#E8D3C2] rounded-xl shadow-sm hover:shadow-lg transition"
+          >
+            <p className="font-bold text-lg">
+              {item.priority.toUpperCase()} — {item.area}
+            </p>
+            <p className="mt-1 opacity-90">{item.description}</p>
+            <p className="mt-1 text-sm opacity-60">Reason: {item.reason}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
